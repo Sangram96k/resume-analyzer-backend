@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ResumeMatch AI</title>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                brand: '#1565C0',
+                surface: '#F4F6FB',
+                card: '#FFFFFF',
+                txt: '#1A1A2E',
+                accent: '#00C9A7'
+              },
+              fontFamily: {
+                sans: ['DM Sans', 'sans-serif'],
+                mono: ['Space Mono', 'monospace']
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        html, body { height: 100%; margin: 0; }
+        .app-shell { height: 100%; overflow: auto; }
+
+        @keyframes scoreFill {
+          from { stroke-dashoffset: 283; }
+        }
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+        .anim-fade-up { animation: fadeUp 0.5s ease both; }
+        .anim-fade-up-1 { animation: fadeUp 0.5s ease 0.1s both; }
+        .anim-fade-up-2 { animation: fadeUp 0.5s ease 0.2s both; }
+        .anim-fade-up-3 { animation: fadeUp 0.5s ease 0.3s both; }
+        .score-circle { animation: scoreFill 1.2s ease both; }
+        .spinner { animation: spin 0.8s linear infinite; }
+        .dropzone-active { border-color: #1565C0 !important; background: #E3F2FD !important; }
+        .nav-link { position: relative; }
+        .nav-link.active::after {
+          content: '';
+          position: absolute;
+          bottom: -2px;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: #1565C0;
+          border-radius: 1px;
+        }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-full bg-surface font-sans text-txt">
+<div class="app-shell" id="app-shell">
+    <!-- Navbar -->
+    <nav class="bg-card border-b border-gray-100 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-14">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="navigate('home')">
+                    <div class="w-8 h-8 rounded-lg bg-brand flex items-center justify-center">
+                        <i data-lucide="scan-search" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <span class="font-bold text-lg tracking-tight">ResumeMatch AI</span>
+                </div>
+                <div class="hidden sm:flex items-center gap-1">
+                    <button onclick="navigate('home')"     class="nav-link active px-3 py-1.5 text-sm font-medium rounded-md hover:bg-surface transition" data-nav="home">Home</button>
+                    <button onclick="navigate('history')"  class="nav-link px-3 py-1.5 text-sm font-medium rounded-md hover:bg-surface transition" data-nav="history">History</button>
+                    <button onclick="navigate('reports')"  class="nav-link px-3 py-1.5 text-sm font-medium rounded-md hover:bg-surface transition" data-nav="reports">Reports</button>
+                    <button onclick="navigate('settings')" class="nav-link px-3 py-1.5 text-sm font-medium rounded-md hover:bg-surface transition" data-nav="settings">Settings</button>
+                </div>
+                <button class="sm:hidden p-2 rounded-lg hover:bg-surface" onclick="toggleMobileMenu()">
+                    <i data-lucide="menu" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+        <div id="mobile-menu" class="hidden sm:hidden border-t border-gray-100 bg-card">
+            <div class="px-4 py-2 flex flex-col gap-1">
+                <button onclick="navigate('home')"     class="text-left px-3 py-2 text-sm font-medium rounded-md hover:bg-surface">Home</button>
+                <button onclick="navigate('history')"  class="text-left px-3 py-2 text-sm font-medium rounded-md hover:bg-surface">History</button>
+                <button onclick="navigate('reports')"  class="text-left px-3 py-2 text-sm font-medium rounded-md hover:bg-surface">Reports</button>
+                <button onclick="navigate('settings')" class="text-left px-3 py-2 text-sm font-medium rounded-md hover:bg-surface">Settings</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page: Home -->
+    <div id="page-home" class="page max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-8 anim-fade-up">
+            <h1 class="text-2xl sm:text-3xl font-bold mb-1">Resume Matcher</h1>
+            <p class="text-gray-500 text-sm">Upload a resume and paste a job description to analyze fit.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6 anim-fade-up-1">
+            <!-- Upload Panel -->
+            <div class="bg-card rounded-2xl border border-gray-100 shadow-sm p-6">
+                <label class="text-sm font-semibold text-gray-700 mb-3 block">Upload Resume (PDF)</label>
+                <div id="dropzone"
+                     class="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-brand hover:bg-blue-50/30 transition-all group"
+                     onclick="simulateUpload()"
+                     ondragover="event.preventDefault(); this.classList.add('dropzone-active')"
+                     ondragleave="this.classList.remove('dropzone-active')"
+                     ondrop="event.preventDefault(); this.classList.remove('dropzone-active'); handleDrop(event)">
+                    <div class="flex flex-col items-center gap-3">
+                        <div class="w-14 h-14 rounded-2xl bg-surface flex items-center justify-center group-hover:bg-blue-100 transition">
+                            <i data-lucide="cloud-upload" class="w-7 h-7 text-gray-400 group-hover:text-brand transition"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-600" id="upload-status">Click or drag &amp; drop</p>
+                            <p class="text-xs text-gray-400 mt-1">PDF files up to 5MB</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- JD Panel -->
+            <div class="bg-card rounded-2xl border border-gray-100 shadow-sm p-6">
+                <label for="jd-textarea" class="text-sm font-semibold text-gray-700 mb-3 block">Job Description</label>
+                <textarea id="jd-textarea"
+                          class="w-full h-40 border border-gray-200 rounded-xl p-4 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand transition placeholder:text-gray-300"
+                          placeholder="Paste the full job description here..."></textarea>
+            </div>
+        </div>
+
+        <button id="analyze-btn" onclick="analyzeMatch()"
+                class="w-full bg-brand hover:bg-blue-800 text-white font-semibold py-3.5 rounded-xl shadow-sm hover:shadow-md transition-all text-sm anim-fade-up-2 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+            <span id="analyze-btn-text">Analyze Match</span>
+        </button>
+
+        <!-- Loading -->
+        <div id="loading-state" class="hidden mt-10 text-center py-16">
+            <div class="inline-flex items-center gap-2">
+                <svg class="spinner w-5 h-5 text-brand" viewBox="0 0 24 24" fill="none">
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70" stroke-linecap="round"/>
+                </svg>
+                <span class="text-sm text-gray-500 font-medium">Analyzing resume match...</span>
+            </div>
+        </div>
+
+        <!-- Result Card -->
+        <div id="result-card" class="hidden mt-8 bg-card rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div class="p-6 sm:p-8">
+                <!-- Score Circle -->
+                <div class="flex flex-col items-center mb-8">
+                    <div class="relative w-36 h-36 mb-4">
+                        <svg viewBox="0 0 100 100" class="w-full h-full -rotate-90">
+                            <circle cx="50" cy="50" r="45" fill="none" stroke="#F0F0F0" stroke-width="6"/>
+                            <circle id="score-arc" cx="50" cy="50" r="45" fill="none" stroke="#1565C0" stroke-width="6"
+                                    stroke-linecap="round" stroke-dasharray="283" stroke-dashoffset="283" class="score-circle"/>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span id="score-value" class="text-4xl font-bold font-mono">0</span>
+                            <span class="text-xs text-gray-400 font-medium">MATCH</span>
+                        </div>
+                    </div>
+                    <div id="recommendation-badge" class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider"></div>
+                </div>
+
+                <!-- Breakdown Table -->
+                <div class="overflow-x-auto mb-8">
+                    <table class="w-full text-sm">
+                        <thead>
+                        <tr class="border-b border-gray-100">
+                            <th class="text-left py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Criteria</th>
+                            <th class="text-center py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Score</th>
+                            <th class="text-center py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Max</th>
+                            <th class="text-left py-2.5 px-3 text-xs font-semibold text-gray-400 uppercase tracking-wider w-1/3">Bar</th>
+                        </tr>
+                        </thead>
+                        <tbody id="breakdown-body"></tbody>
+                    </table>
+                </div>
+
+                <!-- Skills -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Skill Gaps</h4>
+                        <div id="skill-gaps" class="flex flex-wrap gap-2"></div>
+                    </div>
+                    <div>
+                        <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Matching Skills</h4>
+                        <div id="matching-skills" class="flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="bg-surface rounded-xl p-4">
+                    <p id="summary-text" class="text-sm italic text-gray-600"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page: History -->
+    <div id="page-history" class="page hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6 anim-fade-up">
+            <h1 class="text-2xl font-bold mb-1">Evaluation History</h1>
+            <p class="text-gray-500 text-sm">Browse all previous resume evaluations.</p>
+        </div>
+        <div class="bg-card rounded-2xl border border-gray-100 shadow-sm overflow-hidden anim-fade-up-1">
+            <div class="p-4 sm:p-5 border-b border-gray-100 flex flex-col sm:flex-row gap-3">
+                <div class="relative flex-1">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"></i>
+                    <input id="history-search" type="text" placeholder="Search by candidate name..."
+                           class="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 focus:border-brand"
+                           oninput="filterHistory()">
+                </div>
+                <select id="score-filter" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white" onchange="filterHistory()">
+                    <option value="all">All Scores</option>
+                    <option value="above70">Above 70</option>
+                    <option value="above50">Above 50</option>
+                    <option value="below50">Below 50</option>
+                </select>
+                <button onclick="loadHistory()" class="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-blue-800 transition">
+                    Refresh
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-surface/60">
+                    <tr>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">ID</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Candidate</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Job Title</th>
+                        <th class="text-center py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Score</th>
+                        <th class="text-center py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Recommendation</th>
+                        <th class="text-left py-3 px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider">Evaluated At</th>
+                    </tr>
+                    </thead>
+                    <tbody id="history-body"></tbody>
+                </table>
+            </div>
+            <div id="history-empty" class="hidden py-16 text-center">
+                <i data-lucide="inbox" class="w-10 h-10 text-gray-300 mx-auto mb-3"></i>
+                <p class="text-sm text-gray-400">No evaluations yet. Analyze a resume to get started.</p>
+            </div>
+            <div id="pagination" class="hidden border-t border-gray-100 p-4 flex items-center justify-between">
+                <span id="page-info" class="text-xs text-gray-400"></span>
+                <div class="flex gap-1">
+                    <button id="prev-btn" onclick="changePage(-1)" class="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed">Prev</button>
+                    <button id="next-btn" onclick="changePage(1)"  class="px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-surface disabled:opacity-30 disabled:cursor-not-allowed">Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Page: Reports -->
+    <div id="page-reports" class="page hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col items-center justify-center py-24 text-center anim-fade-up">
+            <div class="w-20 h-20 rounded-3xl bg-surface flex items-center justify-center mb-6">
+                <i data-lucide="bar-chart-3" class="w-10 h-10 text-gray-300"></i>
+            </div>
+            <h2 class="text-xl font-bold mb-2 text-gray-700">Reports Coming Soon</h2>
+            <p class="text-sm text-gray-400 max-w-xs">Analytics and insights will be available here to help you make smarter hiring decisions.</p>
+        </div>
+    </div>
+
+    <!-- Page: Settings -->
+    <div id="page-settings" class="page hidden max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="flex flex-col items-center justify-center py-24 text-center anim-fade-up">
+            <div class="w-20 h-20 rounded-3xl bg-surface flex items-center justify-center mb-6">
+                <i data-lucide="settings" class="w-10 h-10 text-gray-300"></i>
+            </div>
+            <h2 class="text-xl font-bold mb-2 text-gray-700">Settings Coming Soon</h2>
+            <p class="text-sm text-gray-400 max-w-xs">Configure your preferences here including scoring weights and notification settings.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ── State ─────────────────────────────────────────────────────
+    let allRecords  = [];
+    let currentPage = 1;
+    const pageSize  = 8;
+    let resumeFile  = null;
+
+    // ── Navigation ────────────────────────────────────────────────
+    function navigate(page) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById('page-' + page).classList.remove('hidden');
+      document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+      document.querySelectorAll(`[data-nav="${page}"]`).forEach(l => l.classList.add('active'));
+      document.getElementById('mobile-menu').classList.add('hidden');
+      if (page === 'history') loadHistory();
+      lucide.createIcons();
+    }
+
+    function toggleMobileMenu() {
+      document.getElementById('mobile-menu').classList.toggle('hidden');
+    }
+
+    // ── File Upload ───────────────────────────────────────────────
+    function handleFileUpload(file) {
+      if (!file.type.includes('pdf')) { showToast('Please upload a PDF file'); return; }
+      if (file.size > 5 * 1024 * 1024) { showToast('File must be smaller than 5MB'); return; }
+      resumeFile = file;
+      document.getElementById('upload-status').textContent = '✓ ' + file.name;
+      document.getElementById('upload-status').classList.add('text-green-600');
+      document.getElementById('dropzone').classList.add('border-green-300', 'bg-green-50/30');
+      checkAnalyzeReady();
+    }
+
+    function handleDrop(event) {
+      const file = event.dataTransfer.files[0];
+      if (file) handleFileUpload(file);
+    }
+
+    function simulateUpload() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.pdf';
+      input.onchange = (e) => { if (e.target.files[0]) handleFileUpload(e.target.files[0]); };
+      input.click();
+    }
+
+    function checkAnalyzeReady() {
+      const jd = document.getElementById('jd-textarea').value.trim();
+      document.getElementById('analyze-btn').disabled = !(resumeFile && jd.length > 10);
+    }
+    document.getElementById('jd-textarea').addEventListener('input', checkAnalyzeReady);
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function getRecBadgeClasses(rec) {
+      if (!rec) return 'bg-gray-100 text-gray-600';
+      const r = rec.toUpperCase();
+      if (r.includes('STRONG'))   return 'bg-emerald-100 text-emerald-700';
+      if (r.includes('MODERATE')) return 'bg-yellow-100 text-yellow-700';
+      if (r.includes('WEAK'))     return 'bg-orange-100 text-orange-700';
+      return 'bg-red-100 text-red-700';
+    }
+
+    function getScoreBadgeClasses(score) {
+      if (score >= 80) return 'bg-emerald-100 text-emerald-700';
+      if (score >= 60) return 'bg-yellow-100 text-yellow-700';
+      if (score >= 40) return 'bg-orange-100 text-orange-700';
+      return 'bg-red-100 text-red-700';
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.className = 'fixed bottom-4 right-4 bg-gray-900 text-white px-4 py-2.5 rounded-xl text-sm shadow-lg z-50';
+      t.textContent = msg;
+      document.body.appendChild(t);
+      setTimeout(() => t.remove(), 3000);
+    }
+
+    // ── Analyze ───────────────────────────────────────────────────
+    async function analyzeMatch() {
+      if (!resumeFile) { showToast('Please upload a resume first'); return; }
+      const jd = document.getElementById('jd-textarea').value.trim();
+      if (!jd) { showToast('Please paste a job description'); return; }
+
+      const btn     = document.getElementById('analyze-btn');
+      const loading = document.getElementById('loading-state');
+      const result  = document.getElementById('result-card');
+
+      btn.disabled  = true;
+      btn.innerHTML = '<span class="inline-flex items-center gap-2"><svg class="spinner w-4 h-4" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="30 70" stroke-linecap="round"/></svg>Analyzing...</span>';
+      result.classList.add('hidden');
+      loading.classList.remove('hidden');
+
+      try {
+        const formData = new FormData();
+        formData.append('file', resumeFile);
+        formData.append('jd', jd);
+
+        const response = await fetch('http://localhost:8080/api/agent/match-jd', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) throw new Error('API error: ' + response.status);
+
+        const data = await response.json();
+
+        // ── Map API fields (camelCase) to UI ──────────────────────
+        const score  = Math.min(Math.max(Math.round(data.matchScore || 0), 0), 100);
+        const rec    = data.hiringRecommendation || 'NOT_RECOMMENDED';
+        const bd     = data.breakdown || {};
+        const gaps   = Array.isArray(data.skillGaps)      ? data.skillGaps      : [];
+        const skills = Array.isArray(data.matchingSkills)  ? data.matchingSkills : [];
+        const name   = data.candidateName  || 'Unknown';
+        const title  = data.jobTitle       || 'Unknown';
+        const summary = data.summaryRemark || '';
+
+        const criteria = [
+          { name: 'Must-Have Skills', score: bd.mustHaveSkills  || 0, max: 40 },
+          { name: 'Technical Skills', score: bd.technicalSkills || 0, max: 25 },
+          { name: 'Experience',       score: bd.experience      || 0, max: 20 },
+          { name: 'Education',        score: bd.education       || 0, max: 10 },
+          { name: 'Soft Skills',      score: bd.softSkills      || 0, max:  5 }
+        ];
+
+        // ── Render result card ────────────────────────────────────
+        loading.classList.add('hidden');
+        result.classList.remove('hidden');
+
+        // Score arc animation
+        const arc = document.getElementById('score-arc');
+        arc.style.strokeDashoffset = '283';
+        arc.offsetHeight;
+        arc.style.strokeDashoffset = 283 - (283 * score / 100);
+        arc.style.transition = 'stroke-dashoffset 1.2s ease';
+
+        document.getElementById('score-value').textContent = score;
+
+        const badge = document.getElementById('recommendation-badge');
+        badge.textContent  = rec.replace(/_/g, ' ');
+        badge.className    = `px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${getRecBadgeClasses(rec)}`;
+
+        document.getElementById('breakdown-body').innerHTML = criteria.map(c => `
+          <tr class="border-b border-gray-50">
+            <td class="py-2.5 px-3 font-medium">${c.name}</td>
+            <td class="py-2.5 px-3 text-center font-mono font-bold">${c.score}</td>
+            <td class="py-2.5 px-3 text-center text-gray-400">${c.max}</td>
+            <td class="py-2.5 px-3">
+              <div class="w-full bg-gray-100 rounded-full h-2">
+                <div class="h-2 rounded-full bg-brand" style="width:${c.max > 0 ? ((c.score/c.max)*100).toFixed(0) : 0}%"></div>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+
+        document.getElementById('skill-gaps').innerHTML     = gaps.map(s   => `<span class="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-600">${s}</span>`).join('');
+        document.getElementById('matching-skills').innerHTML = skills.map(s => `<span class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-600">${s}</span>`).join('');
+        document.getElementById('summary-text').textContent  = summary;
+
+        btn.innerHTML = '<span id="analyze-btn-text">Analyze Match</span>';
+        btn.disabled  = false;
+
+        showToast(`✓ Saved — ${name} scored ${score}%`);
+
+      } catch (error) {
+        loading.classList.add('hidden');
+        btn.innerHTML = '<span id="analyze-btn-text">Analyze Match</span>';
+        btn.disabled  = false;
+        showToast('Error: ' + error.message);
+      }
+    }
+
+    // ── History ───────────────────────────────────────────────────
+    async function loadHistory() {
+      try {
+        const res  = await fetch('http://localhost:8080/api/agent/history/all');
+        const data = await res.json();
+        // API returns array sorted by newest first
+        allRecords = data.sort((a, b) => new Date(b.evaluatedAt) - new Date(a.evaluatedAt));
+        renderHistory();
+      } catch (e) {
+        showToast('Failed to load history: ' + e.message);
+      }
+    }
+
+    function filterHistory() {
+      currentPage = 1;
+      renderHistory();
+    }
+
+    function renderHistory() {
+      const search = (document.getElementById('history-search').value || '').toLowerCase();
+      const filter = document.getElementById('score-filter').value;
+
+      let filtered = allRecords.filter(r => {
+        const nameMatch  = (r.candidateName || '').toLowerCase().includes(search);
+        let   scoreMatch = true;
+        if      (filter === 'above70') scoreMatch = r.matchScore >= 70;
+        else if (filter === 'above50') scoreMatch = r.matchScore >= 50;
+        else if (filter === 'below50') scoreMatch = r.matchScore <  50;
+        return nameMatch && scoreMatch;
+      });
+
+      const tbody      = document.getElementById('history-body');
+      const empty      = document.getElementById('history-empty');
+      const pagination = document.getElementById('pagination');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        empty.classList.remove('hidden');
+        pagination.classList.add('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+      const totalPages = Math.ceil(filtered.length / pageSize);
+      currentPage      = Math.min(currentPage, totalPages);
+      const start      = (currentPage - 1) * pageSize;
+      const pageItems  = filtered.slice(start, start + pageSize);
+
+      tbody.innerHTML = pageItems.map((r, i) => {
+        const date    = new Date(r.evaluatedAt);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                      + ' ' + date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        return `<tr class="border-b border-gray-50 hover:bg-surface/50 transition">
+          <td class="py-3 px-4 text-gray-400 font-mono text-xs">#${r.id || (start + i + 1)}</td>
+          <td class="py-3 px-4 font-medium">${r.candidateName || 'Unknown'}</td>
+          <td class="py-3 px-4 text-gray-500">${r.jobTitle || 'Unknown'}</td>
+          <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-bold ${getScoreBadgeClasses(r.matchScore)}">${r.matchScore}%</span></td>
+          <td class="py-3 px-4 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${getRecBadgeClasses(r.hiringRecommendation)}">${(r.hiringRecommendation || '').replace(/_/g,' ')}</span></td>
+          <td class="py-3 px-4 text-gray-400 text-xs">${dateStr}</td>
+        </tr>`;
+      }).join('');
+
+      pagination.classList.remove('hidden');
+      document.getElementById('page-info').textContent = `Page ${currentPage} of ${totalPages} (${filtered.length} records)`;
+      document.getElementById('prev-btn').disabled = currentPage <= 1;
+      document.getElementById('next-btn').disabled = currentPage >= totalPages;
+    }
+
+    function changePage(dir) {
+      currentPage += dir;
+      renderHistory();
+    }
+
+    // ── Init ──────────────────────────────────────────────────────
+    lucide.createIcons();
+    navigate('home');
+</script>
+</body>
+</html>
